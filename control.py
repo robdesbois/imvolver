@@ -1,28 +1,33 @@
 import pygame
+import pygame.gfxdraw
 import sys
 
 import view
 import image_model
+
+# could try optimising rendering by caching intermediate results:
+# where there are repetitions of the same polygon sub-sequence (in rendering order)
+# the result of rendering these independently of the rest of the sequence in any
+# given rendering could then be applied to the result of head, and followed
+# by the tail.
+# this may not work though: I don't think alpha-blending is associative. It may
+# still be possible to determine a way to refactor the mathematical expression to
+# allow sub-sequences to be prerendered.
 
 # Return ImageModel rendered onto pygame.Surface
 def render( imageModel ):
     # target surface
     s = pygame.Surface( imageModel.size(), pygame.SRCALPHA | pygame.HWSURFACE, 32 )
 
-    # per-shape surface; required for blitting to target
-    # as draw does not support alpha
-    ss = pygame.Surface( imageModel.size(), pygame.SRCALPHA | pygame.HWSURFACE, 32 )
-    ss.set_colorkey( 0x00000000 )
+    s.fill( 0x00000000 )
+    s.fill( 0xFFFFFFFF )
 
     for shape in imageModel.shapes():
         # draw shape
-        ss.fill( 0x00000000 )
-        # print(shape["colour"])
-        pygame.draw.polygon( ss, shape["colour"], shape["points"] )
-
-        ss.set_alpha( shape["colour"][3] )
-
-        s.blit( ss, (0, 0) )
+        # use gfxdraw because draw.polygon doesn't support alpha-blending and the
+        # alternative is dog-slow.
+        pygame.gfxdraw.aapolygon(     s, shape["points"], shape["colour"]);
+        pygame.gfxdraw.filled_polygon(s, shape["points"], shape["colour"]);
 
     return s
 
@@ -46,19 +51,18 @@ def compareEvalutedModels( a, b ):
 
 class Control():
     def __init__( self ):
-        self.targetSurface_ = pygame.image.load( "/media/rob/GEOFFREY/photos/2013-08-04 13.41.57.jpg" )
+        self.genepoolSize_ = 10
+
+    def run( self, targetImagePath ):
+        # enable alpha-blending
+        # uses display format for fast blitting
+        self.targetSurface_ = pygame.image.load( targetImagePath )
+        self.targetSurface_ = self.targetSurface_.convert( 32, pygame.SRCALPHA | pygame.HWSURFACE )
         self.width_  = self.targetSurface_.get_width()
         self.height_ = self.targetSurface_.get_height()
 
         self.mainView_ = view.View( self.width_, self.height_ )
 
-        # enable alpha-blending
-        # uses display format for fast blitting - must precede View creation
-        self.targetSurface_ = self.targetSurface_.convert_alpha()
-
-        self.genepoolSize_ = 1
-
-    def run( self ):
         self.update_model()
         # for i in range(0, 2):
         while True:
@@ -77,6 +81,9 @@ class Control():
         if event.key == pygame.K_RETURN:
             self.update_model()
 
+    def draw_model( self, m ):
+        self.mainView_.draw( m )
+
     def update_model( self ):
             self.models_ = [self.makeRandomModel() for i in range( self.genepoolSize_ )]
             renderedModels  = [render(m) for m in self.models_]
@@ -84,16 +91,15 @@ class Control():
             # (fitness, surface, model)
             evaluatedModels = [(evaluate(self.targetSurface_, rm), rm, m) for rm in renderedModels]
 
-            self.mainView_.draw( renderedModels[0] )
 
+            evaluatedModels = sorted( evaluatedModels, lambda a,b: cmp(a[0], b[0]) )
 
-            # evaluatedModels = sorted( evaluatedModels, lambda a,b: cmp(a[0], b[0]) )
+            bestCandidate = evaluatedModels[0]
+            print("--------------------------------------------------------")
+            print("Best fitness: {:3.8f}".format( 100 * bestCandidate[0] ))
+            print("Polygons:     {:4d}"  .format( len( bestCandidate[2].shapes() )))
 
-            # for m in evaluatedModels:
-            #     print(m[0])
-            # print("--------------------------------------------------------{}\n".format(i))
-
-            # self.mainView_.draw( self.targetSurface_ )
+            self.draw_model( bestCandidate[1] )
 
     def makeRandomModel( self ):
         m = image_model.ImageModel( self.size() )
