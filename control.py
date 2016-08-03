@@ -104,14 +104,7 @@ class Control():
     def makeRandomModel( self ):
         m = image_model.ImageModel( self.size() )
         m.randomise()
-        # colours = [
-        #     (255,0,0,255),
-        #     (0,255,0,128),
-        #     (0,0,255,128),
-        # ]
-        # for s,c in zip(m.shapes_, colours):
-        #     print("colour: {}".format(c))
-        #     s["colour"] = c
+
         return m
 
     def size( self ):
