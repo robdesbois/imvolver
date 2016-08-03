@@ -1,5 +1,7 @@
+import bisect
 import pygame
 import pygame.gfxdraw
+import random
 import sys
 
 import view
@@ -63,7 +65,9 @@ class Control():
 
         self.mainView_ = view.View( self.width_, self.height_ )
 
+        self.models_ = [self.makeRandomModel() for i in range( self.genepoolSize_ )]
         self.update_model()
+
         # for i in range(0, 2):
         while True:
             for event in pygame.event.get():
@@ -85,7 +89,6 @@ class Control():
         self.mainView_.draw( m )
 
     def update_model( self ):
-            self.models_ = [self.makeRandomModel() for i in range( self.genepoolSize_ )]
             renderedModels  = [render(m) for m in self.models_]
 
             # (fitness, surface, model)
@@ -94,11 +97,37 @@ class Control():
             evaluatedModels   = sorted( evaluatedModels, descendingFitness )
 
             bestCandidate = evaluatedModels[0]
+
             print("--------------------------------------------------------")
             print("Best fitness: {:3.8f}".format( 100 * bestCandidate[0] ))
             print("Polygons:     {:4d}"  .format( len( bestCandidate[2].shapes() )))
 
             self.draw_model( bestCandidate[1] )
+
+            self.evolve( evaluatedModels )
+
+    def evolve( self, evaluatedModels ):
+        """evaluatedModels: [(fitness, surface, model)]"""
+
+        # roulette wheel selection
+        # generate cumulative distribution function of fitnesses
+        # typically uses normalised fitness, but scaling adds no benefit here
+        fitnessCDF = []
+        cumFit     = 0
+        for m in evaluatedModels:
+            cumFit = cumFit + m[0]
+            fitnessCDF.append( cumFit )
+
+        numElites = 1
+        newModels = [ elite[2] for elite in evaluatedModels[0:numElites] ]
+        for _ in range(numElites, self.genepoolSize_):
+            ran   = random.uniform( 0, cumFit )
+            pos   = bisect.bisect_left( fitnessCDF, cumFit )
+            model = evaluatedModels[ pos ]
+            newModels.append( model[2] )
+
+        print(newModels)
+        self.models_ = newModels
 
     def makeRandomModel( self ):
         m = image_model.ImageModel( self.size() )
