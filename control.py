@@ -89,10 +89,9 @@ class Control():
             renderedModels  = [render(m) for m in self.models_]
 
             # (fitness, surface, model)
-            evaluatedModels = [(evaluate(self.targetSurface_, rm), rm, m) for rm in renderedModels]
-
-
-            evaluatedModels = sorted( evaluatedModels, lambda a,b: cmp(a[0], b[0]) )
+            evaluatedModels   = [(evaluate(self.targetSurface_, rm), rm, m) for rm in renderedModels]
+            descendingFitness = lambda a,b: cmp(b[0], a[0])
+            evaluatedModels   = sorted( evaluatedModels, descendingFitness )
 
             bestCandidate = evaluatedModels[0]
             print("--------------------------------------------------------")
