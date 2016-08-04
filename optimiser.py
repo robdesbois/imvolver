@@ -28,19 +28,21 @@ class Optimiser():
         targetSurface:  the optimiser objective. TODO: get this out of the GA! It's part of the evaluator
         renderedModels: (model, surface)
         """
-
-        evaluatedModels   = [(evaluate(targetSurface, rm[1]), rm[1], rm[0]) for rm in renderedModels]
-        descendingFitness = lambda a,b: cmp(b[0], a[0])
-        evaluatedModels   = sorted( evaluatedModels, descendingFitness )
+        evaluatedModels = self.evaluate_models( targetSurface, renderedModels )
 
         bestCandidate = evaluatedModels[0]
-
         print("--------------------------------------------------------")
         print("Best fitness: {:3.8f}".format( 100 * bestCandidate[0] ))
         print("Polygons:     {:4d}"  .format( len( bestCandidate[2].shapes() )))
 
         models = self.select( evaluatedModels )
         return models
+
+    def evaluate_models( self, targetSurface, renderedModels ):
+        evaluatedModels   = [(evaluate(targetSurface, rm[1]), rm[1], rm[0]) for rm in renderedModels]
+        descendingFitness = lambda a,b: cmp(b[0], a[0])
+        evaluatedModels   = sorted( evaluatedModels, descendingFitness )
+        return evaluatedModels
 
     def select( self, evaluatedModels ):
         # roulette wheel selection
