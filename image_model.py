@@ -20,6 +20,9 @@ class ImageModel():
     def shapes( self ):
         return self.shapes_
 
+    def set_shapes( self, shapes ):
+        self.shapes_ = shapes
+
     def randomise( self ):
         self.shapes_ = []
         ns = self.num_shapes()

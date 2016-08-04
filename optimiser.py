@@ -2,6 +2,7 @@ import pygame
 import random
 import bisect
 
+import image_model
 
 class RouletteSelectionOperator():
     """roulette wheel selection operator"""
@@ -75,7 +76,13 @@ class Optimiser():
         return models
 
     def crossover( self, a, b ):
-        return a
+        pos  = random.randint( 0, len( a.shapes() ) - 1)
+        head = a.shapes()[:pos]
+        tail = b.shapes()[pos:]
+
+        offspring = image_model.ImageModel( a.size() )
+        offspring.set_shapes( head + tail )
+        return offspring
 
 def optimise( targetSurface, renderedModels ):
     o = Optimiser()
