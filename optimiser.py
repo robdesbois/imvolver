@@ -3,6 +3,27 @@ import random
 import bisect
 
 
+class RouletteSelectionOperator():
+    """roulette wheel selection operator"""
+
+    def __init__( self, evaluatedModels ):
+        self.evaluatedModels_ = evaluatedModels
+
+        # generate cumulative distribution function of fitnesses
+        # typically uses normalised fitness, but scaling adds no benefit here
+        self.fitnessCDF_ = []
+        self.cumFit_     = 0
+        for m in self.evaluatedModels_:
+            self.cumFit_ = self.cumFit_ + m[0]
+            self.fitnessCDF_.append( self.cumFit_ )
+
+    def select( self ):
+        ran   = random.uniform( 0, self.cumFit_ )
+        pos   = bisect.bisect_left( self.fitnessCDF_, self.cumFit_ )
+        model = self.evaluatedModels_[ pos ]
+        return model[2]
+
+
 # Return value in [0, 1] representing fitness of candidate compared to target
 # Both candidate & target must be pygame.Surface renderings.
 # TODO: make this work. Fitnesses are all coming out above 0.99
@@ -44,25 +65,12 @@ class Optimiser():
         evaluatedModels   = sorted( evaluatedModels, descendingFitness )
         return evaluatedModels
 
-    def select_individual( self, evaluatedModels, fitnessCDF, cumFit ):
-        ran   = random.uniform( 0, cumFit )
-        pos   = bisect.bisect_left( fitnessCDF, cumFit )
-        model = evaluatedModels[ pos ]
-        return model[2]
-
     def select( self, evaluatedModels ):
-        # roulette wheel selection
-        # generate cumulative distribution function of fitnesses
-        # typically uses normalised fitness, but scaling adds no benefit here
-        fitnessCDF = []
-        cumFit     = 0
-        for m in evaluatedModels:
-            cumFit = cumFit + m[0]
-            fitnessCDF.append( cumFit )
+        selector = RouletteSelectionOperator( evaluatedModels )
 
         models = [ elite[2] for elite in evaluatedModels[0:self.numElites_] ]
         while len( models ) < len( evaluatedModels ):
-            parents = [self.select_individual( evaluatedModels, fitnessCDF, cumFit ) for _ in range(0,2)]
+            parents = [selector.select() for _ in range(0,2)]
             models.append( self.crossover( parents[0], parents[1] ))
         return models
 
