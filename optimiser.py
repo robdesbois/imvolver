@@ -36,7 +36,6 @@ class Optimiser():
         print("Polygons:     {:4d}"  .format( len( bestCandidate[2].shapes() )))
 
         models = self.select( evaluatedModels )
-        models = self.crossover( models )
         return models
 
     def evaluate_models( self, targetSurface, renderedModels ):
@@ -63,8 +62,12 @@ class Optimiser():
 
         models = [ elite[2] for elite in evaluatedModels[0:self.numElites_] ]
         while len( models ) < len( evaluatedModels ):
-            models.append( self.select_individual( evaluatedModels, fitnessCDF, cumFit ))
+            parents = [self.select_individual( evaluatedModels, fitnessCDF, cumFit ) for _ in range(0,2)]
+            models.append( self.crossover( parents[0], parents[1] ))
         return models
+
+    def crossover( self, a, b ):
+        return a
 
 def optimise( targetSurface, renderedModels ):
     o = Optimiser()
