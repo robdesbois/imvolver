@@ -4,6 +4,7 @@ import pygame.gfxdraw
 import random
 import sys
 
+import optimiser
 import view
 import image_model
 
@@ -32,24 +33,6 @@ def render( imageModel ):
         pygame.gfxdraw.filled_polygon(s, shape["points"], shape["colour"]);
 
     return s
-
-# Return value in [0, 1] representing fitness of candidate compared to target
-# Both candidate & target must be pygame.Surface renderings.
-def evaluate( target, candidate ):
-    targetPix    = pygame.PixelArray( target )
-    candidatePix = pygame.PixelArray( candidate )
-
-    diffPix = targetPix.compare( candidatePix )
-    diffs   = 0
-    for px in diffPix:
-        for px_ in px:
-            diffs = diffs + px_ / float(0xFFFFFFFF)
-
-    # normalize to [0, 1]
-    return diffs / (target.get_width() * target.get_height())
-
-def compareEvalutedModels( a, b ):
-    return cmp( a[0], b[0] )
 
 class Control():
     def __init__( self ):
@@ -89,45 +72,23 @@ class Control():
         self.mainView_.draw( m )
 
     def update_model( self ):
-            renderedModels  = [render(m) for m in self.models_]
+        renderedModels  = [(m, render(m)) for m in self.models_]
 
-            # (fitness, surface, model)
-            evaluatedModels   = [(evaluate(self.targetSurface_, rm), rm, m) for rm in renderedModels]
-            descendingFitness = lambda a,b: cmp(b[0], a[0])
-            evaluatedModels   = sorted( evaluatedModels, descendingFitness )
+        self.evolve( renderedModels )
+        # TODO: render doesn't belong here; rendering should be done by something
+        #       that avoids re-rendering, perhaps a wrapper around the model?
+        #       should be the same object as a population, since models have to be
+        #       rendered for fitness calculation there anyway
+        self.draw_model( render( self.models_[0] ))
 
-            bestCandidate = evaluatedModels[0]
 
-            print("--------------------------------------------------------")
-            print("Best fitness: {:3.8f}".format( 100 * bestCandidate[0] ))
-            print("Polygons:     {:4d}"  .format( len( bestCandidate[2].shapes() )))
+    def evolve( self, renderedModels ):
+        """renderedModels: [(fitness, surface, model)]"""
 
-            self.draw_model( bestCandidate[1] )
+        self.models_ = optimiser.optimise( self.targetSurface_, renderedModels )
 
-            self.evolve( evaluatedModels )
+        print( self.models_ )
 
-    def evolve( self, evaluatedModels ):
-        """evaluatedModels: [(fitness, surface, model)]"""
-
-        # roulette wheel selection
-        # generate cumulative distribution function of fitnesses
-        # typically uses normalised fitness, but scaling adds no benefit here
-        fitnessCDF = []
-        cumFit     = 0
-        for m in evaluatedModels:
-            cumFit = cumFit + m[0]
-            fitnessCDF.append( cumFit )
-
-        numElites = 1
-        newModels = [ elite[2] for elite in evaluatedModels[0:numElites] ]
-        for _ in range(numElites, self.genepoolSize_):
-            ran   = random.uniform( 0, cumFit )
-            pos   = bisect.bisect_left( fitnessCDF, cumFit )
-            model = evaluatedModels[ pos ]
-            newModels.append( model[2] )
-
-        print(newModels)
-        self.models_ = newModels
 
     def makeRandomModel( self ):
         m = image_model.ImageModel( self.size() )
