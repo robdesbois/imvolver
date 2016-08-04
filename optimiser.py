@@ -36,6 +36,7 @@ class Optimiser():
         print("Polygons:     {:4d}"  .format( len( bestCandidate[2].shapes() )))
 
         models = self.select( evaluatedModels )
+        models = self.crossover( models )
         return models
 
     def evaluate_models( self, targetSurface, renderedModels ):
@@ -43,6 +44,12 @@ class Optimiser():
         descendingFitness = lambda a,b: cmp(b[0], a[0])
         evaluatedModels   = sorted( evaluatedModels, descendingFitness )
         return evaluatedModels
+
+    def select_individual( self, evaluatedModels, fitnessCDF, cumFit ):
+        ran   = random.uniform( 0, cumFit )
+        pos   = bisect.bisect_left( fitnessCDF, cumFit )
+        model = evaluatedModels[ pos ]
+        return model[2]
 
     def select( self, evaluatedModels ):
         # roulette wheel selection
@@ -55,11 +62,8 @@ class Optimiser():
             fitnessCDF.append( cumFit )
 
         models = [ elite[2] for elite in evaluatedModels[0:self.numElites_] ]
-        for _ in range( len( models ), len( evaluatedModels )):
-            ran   = random.uniform( 0, cumFit )
-            pos   = bisect.bisect_left( fitnessCDF, cumFit )
-            model = evaluatedModels[ pos ]
-            models.append( model[2] )
+        while len( models ) < len( evaluatedModels ):
+            models.append( self.select_individual( evaluatedModels, fitnessCDF, cumFit ))
         return models
 
 def optimise( targetSurface, renderedModels ):
