@@ -87,8 +87,6 @@ class Control():
 
         self.models_ = optimiser.optimise( self.targetSurface_, renderedModels )
 
-        print( self.models_ )
-
 
     def makeRandomModel( self ):
         m = image_model.ImageModel( self.size() )

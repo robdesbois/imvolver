@@ -26,11 +26,8 @@ class ImageModel():
     def randomise( self ):
         self.shapes_ = []
         ns = self.num_shapes()
-        print(ns)
         for i in range( ns ):
             s = self.random_shape()
-            # print(s)
-            # print(s["colour"][3])
             self.shapes_.append( s )
 
     def random_shape( self ):
