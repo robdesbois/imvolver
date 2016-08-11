@@ -1,4 +1,6 @@
+import numpy as np
 import pygame
+import pygame.surfarray
 import random
 import bisect
 
@@ -29,17 +31,27 @@ class RouletteSelectionOperator():
 # Both candidate & target must be pygame.Surface renderings.
 # TODO: make this work. Fitnesses are all coming out above 0.99
 def evaluate( target, candidate ):
-    targetPix    = pygame.PixelArray( target )
-    candidatePix = pygame.PixelArray( candidate )
+    tgtA = pygame.surfarray.array2d( target )
+    cndA = pygame.surfarray.array2d( candidate )
 
-    diffPix = targetPix.compare( candidatePix )
-    diffs   = 0
-    for px in diffPix:
-        for px_ in px:
-            diffs = diffs + px_ / float(0xFFFFFFFF)
+    diffs     = np.absolute( tgtA - cndA )
 
-    # normalize to [0, 1]
-    return diffs / (target.get_width() * target.get_height())
+    totalDiff = 0
+    for row in diffs:
+        for pixel in row:
+            colour = target.unmap_rgb( pixel )
+
+            average = float(colour.r + colour.g + colour.b) / 3
+
+            # n in [0.0, 1.0]
+            normalised = float(average) / 255
+
+            totalDiff = totalDiff + normalised
+
+    normalised = totalDiff / (target.get_width() * target.get_height())
+    fit        = 1.0 - normalised
+
+    return fit
 
 class Optimiser():
     def __init__( self ):
@@ -52,8 +64,12 @@ class Optimiser():
         """
         evaluatedModels = self.evaluate_models( targetSurface, renderedModels )
 
+        # lovely
+        fs = ", ".join( [ "{:3.8f}".format( m[0] ) for m in evaluatedModels ] )
+
         bestCandidate = evaluatedModels[0]
         print("--------------------------------------------------------")
+        print("Fitnesses:    " + fs )
         print("Best fitness: {:3.8f}".format( 100 * bestCandidate[0] ))
         print("Polygons:     {:4d}"  .format( len( bestCandidate[2].shapes() )))
 
