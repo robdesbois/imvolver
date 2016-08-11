@@ -22,7 +22,7 @@ class RouletteSelectionOperator():
 
     def select( self ):
         ran   = random.uniform( 0, self.cumFit_ )
-        pos   = bisect.bisect_left( self.fitnessCDF_, self.cumFit_ )
+        pos   = bisect.bisect_left( self.fitnessCDF_, ran )
         model = self.evaluatedModels_[ pos ]
         return model[2]
 
